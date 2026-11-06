@@ -1,0 +1,72 @@
+<!doctype html><html lang="en" data-theme="dark" style="color-scheme: dark;"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Club Tournament</title>
+<style>
+:root{color-scheme:light dark;--bg:#f6f5fb;--cd:#fff;--tx:#1c1b22;--mu:#6b6980;--ac:#6d3df5;--bd:#e3e1ee;--ok:#12805c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14131a;--cd:#1f1d29;--tx:#f0eef8;--mu:#a09cb8;--ac:#9b78ff;--bd:#333047;--ok:#4fd1a1}}
+:root[data-theme="dark"]{--bg:#14131a;--cd:#1f1d29;--tx:#f0eef8;--mu:#a09cb8;--ac:#9b78ff;--bd:#333047;--ok:#4fd1a1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{max-width:640px;margin:0 auto;padding:16px}
+.c{background:var(--cd);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:0 0 12px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 8px}.mu{color:var(--mu);font-size:14px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit;margin:4px 0 8px}
+button{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.g{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.chip{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--bd);font-size:13px}.chip.on{background:var(--ok);color:#fff}
+.m{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--bd)}
+.m.me{background:color-mix(in srgb,var(--ac) 14%,transparent);border-radius:8px;padding:8px}
+.org{border:2px solid var(--ac)}pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);padding:10px;border-radius:10px;margin:6px 0}
+.bar{position:sticky;bottom:8px;display:none}.bar.s{display:block}
+</style></head><body><div id="app"></div>
+
+<script>
+let S={name:'Club Tournament',prize:'Brawl Pass',start:'',ciTime:'',ciOpen:false,players:[],rounds:null,nid:1},isOrg=false,dirty=false,me=0,msg='';
+function alert(m){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;left:12px;right:12px;bottom:70px;background:#222;color:#fff;padding:12px;border-radius:10px;z-index:99;text-align:center';document.body.appendChild(t)}t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',5000)}
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fd=v=>{try{return v?new Date(v).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}):'Not set yet'}catch(e){return v}};
+const pn=id=>{const p=S.players.find(x=>x.id==id);return p?esc(p.n)+' <span class="mu">'+esc(p.t)+'</span>':'-'};
+function set(k,v){S[k]=v;dirty=true;if(k=='ciOpen')render();else bar()}
+function bar(){const b=$('bar');if(b)b.classList.toggle('s',dirty)}
+function add(n,t){n=n.trim();t=t.trim();if(!n||!t)return;const k=t.replace('#','').toUpperCase();const p=S.players.find(x=>x.t.replace('#','').toUpperCase()==k);if(p){p.n=n;return}S.players.push({id:S.nid++,n,t:t.startsWith('#')?t:'#'+t,c:false})}
+function imp(){const L=$('paste').value.split('\n');L.forEach(l=>{l=l.trim();if(!l)return;let a=l.split('|').map(x=>x.trim());if(/^JOIN$/i.test(a[0]))add(a[1]||'',a[2]||'');else if(/^CHECKIN$/i.test(a[0])){const k=(a[1]||'').replace('#','').toUpperCase();S.players.forEach(p=>{if(p.t.replace('#','').toUpperCase()==k)p.c=true})}else if(a.length>1)add(a[0],a[1]);else{const i=l.lastIndexOf('#');if(i>0)add(l.slice(0,i),l.slice(i))}});dirty=true;render()}
+function tog(id){const p=S.players.find(x=>x.id==id);p.c=!p.c;dirty=true;render()}
+function del(id){if(S.rounds)return alert('Reset the bracket first.');S.players=S.players.filter(x=>x.id!=id);dirty=true;render()}
+function mk(){const a=S.players.filter(p=>!S.ciOpen||p.c).map(p=>p.id);if(a.length<2)return alert('Need at least 2 players'+(S.ciOpen?' checked in':''));if(a.length%2)a.push(0);const n=a.length,R=[];for(let r=0;r<n-1;r++){const m=[];for(let i=0;i<n/2;i++){const x=a[i],y=a[n-1-i];if(x&&y)m.push([x,y,0])}R.push(m);a.splice(1,0,a.pop())}S.rounds=R;dirty=true;render();window.scrollTo(0,0);alert('Bracket ready! Tap Publish changes so members can see it.')}
+function rst(){S.rounds=null;dirty=true;render();alert('Bracket reset. Tap Publish changes.')}
+function res(r,i,w){S.rounds[r][i][2]=+w;dirty=true;render()}
+function stand(){const w={};S.players.forEach(p=>w[p.id]=0);let tot=0,done=0;S.rounds.forEach(R=>R.forEach(m=>{tot++;if(m[2]){done++;w[m[2]==1?m[0]:m[1]]++}}));const L=Object.keys(w).filter(id=>S.rounds.some(R=>R.some(m=>m[0]==id||m[1]==id))).map(id=>[+id,w[id]]).sort((a,b)=>b[1]-a[1]);return{L,tot,done}}
+function code(kind){const n=$('gn')?.value.trim(),t=$('gt')?.value.trim();if(kind=='JOIN'&&(!n||!t))return alert('Enter your game name and tag');if(kind=='CHECKIN'&&!t)return alert('Enter your game tag');const c=kind=='JOIN'?'JOIN | '+n+' | '+t:'CHECKIN | '+t;msg=c;render()}
+function cp(){navigator.clipboard&&navigator.clipboard.writeText(msg).then(()=>alert('Copied! Send it to the organizer.'),()=>{})}
+function wa(){window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}
+async function pub(){const tk=localStorage.getItem('tk');if(!tk)return alert('Log in as organizer first');const o=location.hostname.split('.')[0],r=location.pathname.split('/')[1]||(o+'.github.io'),u='https://api.github.com/repos/'+o+'/'+r+'/contents/data.json',H={Authorization:'Bearer '+tk,Accept:'application/vnd.github+json'};try{let sha;const g=await fetch(u,{headers:H});if(g.ok)sha=(await g.json()).sha;const b=btoa(unescape(encodeURIComponent(JSON.stringify(S,null,1))));const p=await fetch(u,{method:'PUT',headers:H,body:JSON.stringify({message:'Update tournament',content:b,sha})});if(!p.ok)throw new Error(p.status==401||p.status==403||p.status==404?'Token has no write access to this repo':'Error '+p.status);dirty=false;bar();alert('Published! Members see it in about 1 minute.')}catch(e){alert(e.message)}}
+function login(){const t=prompt('Paste your GitHub token');if(t){localStorage.setItem('tk',t.trim());isOrg=true;render()}}
+function logout(){localStorage.removeItem('tk');isOrg=false;render()}
+function render(){
+let h='<div class="c"><h1>🏆 '+esc(S.name)+'</h1><div class="mu">Club members only · Round robin · One winner</div>'
++'<p style="margin:10px 0 0">🎁 Prize: <b>'+esc(S.prize)+'</b><br>📅 Starts: <b>'+fd(S.start)+'</b><br>✅ Check-in time: <b>'+fd(S.ciTime)+'</b> <span class="chip '+(S.ciOpen?'on':'')+'">'+(S.ciOpen?'Check-in OPEN':'Check-in not open yet')+'</span></p></div>';
+if(isOrg){h+='<div class="c org"><h2>👑 Organizer panel</h2><label class="mu">Tournament name</label><input value="'+esc(S.name)+'" oninput="set(\'name\',this.value)">'
++'<label class="mu">Prize</label><select onchange="set(\'prize\',this.value)"><option'+(S.prize=='Brawl Pass'?' selected':'')+'>Brawl Pass</option><option'+(S.prize=='Brawl Pass Plus'?' selected':'')+'>Brawl Pass Plus</option></select>'
++'<label class="mu">Tournament date &amp; time</label><input type="datetime-local" value="'+esc(S.start)+'" oninput="set(\'start\',this.value)">'
++'<label class="mu">Check-in time</label><input type="datetime-local" value="'+esc(S.ciTime)+'" oninput="set(\'ciTime\',this.value)">'
++'<label class="row" style="gap:8px"><input type="checkbox" style="width:auto;flex:0" '+(S.ciOpen?'checked':'')+' onchange="set(\'ciOpen\',this.checked)"> Show check-in option to members (only checked-in players get in the bracket)</label>'
++'<h2 style="margin-top:12px">Add players</h2><div class="mu">Paste member entries (one per line): <i>JOIN | Name | #TAG</i>, <i>CHECKIN | #TAG</i>, or just <i>Name | #TAG</i></div><textarea id="paste" rows="4"></textarea><button onclick="imp()">Add / update players</button>'
++'<div class="mu" style="margin-top:12px">Other organizers: add them as collaborators on your GitHub repo, then they log in with their own token.</div><button class="g" style="margin-top:8px" onclick="logout()">Log out</button></div>'}
+h+='<div class="c"><h2>Players ('+S.players.length+')</h2>';
+if(!S.players.length)h+='<div class="mu">No players yet.</div>';
+S.players.forEach(p=>{h+='<div class="m"><span>'+esc(p.n)+' <span class="mu">'+esc(p.t)+'</span></span><span>'+(S.ciOpen||isOrg?'<span class="chip '+(p.c?'on':'')+'" '+(isOrg?'onclick="tog('+p.id+')" style="cursor:pointer"':'')+'>'+(p.c?'checked in':'not checked in')+'</span> ':'')+(isOrg&&!S.rounds?'<span onclick="del('+p.id+')" style="cursor:pointer">✕</span>':'')+'</span></div>'});
+h+='</div>';
+if(!S.rounds){h+='<div class="c"><h2>Join the tournament</h2><input id="gn" placeholder="Your game name"><input id="gt" placeholder="Your game tag (#ABC123)"><button onclick="code(\'JOIN\')">Participate</button>'
++(S.ciOpen?' <button class="g" onclick="code(\'CHECKIN\')">Check in</button>':'')+(msg?'<p class="mu">Copy this and send it to the organizer:</p><pre>'+esc(msg)+'</pre><div class="row"><button onclick="cp()">Copy</button><button class="g" onclick="wa()">Send on WhatsApp</button></div>':'')+'</div>';
+if(isOrg)h+='<div class="c org"><button onclick="mk()">⚡ Make bracket (one click)</button></div>'}
+else{const s=stand();h+='<div class="c"><h2>Find my opponents</h2><select onchange="me=this.value;render()"><option value="0">Show everyone</option>'+S.players.map(p=>'<option value="'+p.id+'"'+(me==p.id?' selected':'')+'>'+esc(p.n)+' '+esc(p.t)+'</option>').join('')+'</select></div>';
+S.rounds.forEach((R,r)=>{h+='<div class="c"><h2>Round '+(r+1)+'</h2>';R.forEach((m,i)=>{const mine=me&&(m[0]==me||m[1]==me);if(me&&!mine)return;h+='<div class="m'+(mine?' me':'')+'"><span>'+(m[2]==1?'🏅 ':'')+pn(m[0])+'</span><span class="mu">vs</span><span style="text-align:right">'+(m[2]==2?'🏅 ':'')+pn(m[1])+'</span></div>'+(isOrg?'<select onchange="res('+r+','+i+',this.value)"><option value="0">Result…</option><option value="1"'+(m[2]==1?' selected':'')+'>Winner: '+esc(S.players.find(x=>x.id==m[0]).n)+'</option><option value="2"'+(m[2]==2?' selected':'')+'>Winner: '+esc(S.players.find(x=>x.id==m[1]).n)+'</option></select>':'')});h+='</div>'});
+h+='<div class="c"><h2>Standings ('+s.done+'/'+s.tot+' matches)</h2>';s.L.forEach(([id,w],i)=>{h+='<div class="m"><span>'+(i+1)+'. '+pn(id)+'</span><b>'+w+' W</b></div>'});
+if(s.done==s.tot&&s.L.length){h+=s.L[1]&&s.L[1][1]==s.L[0][1]?'<p><b>Tie for first — tie-break match needed.</b></p>':'<p>🎉 <b>Winner: '+pn(s.L[0][0])+'</b> wins '+esc(S.prize)+'!</p>'}h+='</div>';
+if(isOrg)h+='<div class="c org"><button class="g" onclick="rst()">Reset bracket</button></div>'}
+if(isOrg)h+='<div class="bar" id="bar"><button style="width:100%" onclick="pub()">Publish changes so members see them</button></div>';
+if(!isOrg)h+='<p class="mu" style="text-align:center"><a href="#" onclick="login();return false">Organizer login</a></p>';$('app').innerHTML=h;bar()}
+render();
+(async()=>{try{const r=await fetch('data.json?t='+Date.now());if(r.ok)S=await r.json()}catch(e){}try{isOrg=!!localStorage.getItem('tk')}catch(e){}render()})();
+</script>
+</body></html>
